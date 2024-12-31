@@ -126,4 +126,4 @@ Response:
 MIT
 
 ## Support
-For support, email support@careersync.ai
+For support, email amarnathagowdat@gmail.com
