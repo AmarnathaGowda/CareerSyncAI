@@ -265,3 +265,98 @@ Thumbs.db
 *.bak
 *.tmp
 *.log
+# ---- Python ----
+# Byte-compiled files
+*.py[cod]
+__pycache__/
+*.so
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Python egg files
+*.egg
+*.egg-info/
+dist/
+build/
+*.pyd
+
+# PyInstaller
+*.spec
+
+# Logs and database files
+*.log
+*.db
+*.sqlite3
+
+# Unit test / coverage results
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# MyPy cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# PyCharm files
+.idea/
+
+# ---- React ----
+# Node modules
+node_modules/
+
+# Build output
+build/
+dist/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Coverage files
+coverage/
+
+# React Native
+.expo/
+.expo-shared/
+android/
+ios/
+
+# ---- General ----
+# OS or IDE-specific files
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.log
