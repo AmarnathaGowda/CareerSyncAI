@@ -10,13 +10,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 import PyPDF2
 import tempfile
 from datetime import datetime
+import json
 
 app = Flask(__name__)
 
 api = Api(
     app,
     version='1.0',
-    title='CareerSync AI API',
+    title='CareerSync AI',
     description='AI-powered resume and job description matching API',
     doc='/swagger'
 )
@@ -33,7 +34,8 @@ analysis_model = api.model('Analysis', {
     'skill_match': fields.Float(example=80.0),
     'matching_skills': fields.List(fields.String, example=['python', 'javascript']),
     'missing_skills': fields.List(fields.String, example=['docker']),
-    'recommendation': fields.String(example='Strong Match')
+    'recommendation': fields.String(example='Strong Match'),
+    'skill_categories': fields.Raw(description='Categorized skills')
 })
 
 response_model = api.model('Response', {
@@ -47,59 +49,117 @@ class ResumeJobMatcher:
         self.nlp = spacy.load('en_core_web_sm')
         self.vectorizer = TfidfVectorizer(stop_words='english')
         
+        # Load skills data from JSON file
+        with open('skills_data.json', 'r') as f:
+            skills_data = json.load(f)
+            
+        self.skill_patterns = skills_data['skill_patterns']
+        self.skill_weights = skills_data['skill_weights']
+        self.exclude_words = set(skills_data['exclude_words'])
+        
+        # Create flattened skill list
+        self.valid_skills = set([
+            skill.lower() 
+            for category in self.skill_patterns.values() 
+            for skill in category
+        ])
+
     def preprocess_text(self, text):
         text = text.lower()
         text = re.sub(r'[^\w\s]', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
         doc = self.nlp(text)
         return ' '.join([token.lemma_ for token in doc if not token.is_stop])
-    
+
     def extract_skills(self, text):
         doc = self.nlp(text.lower())
-        skills = []
+        potential_skills = set()
+        categorized_skills = {category: [] for category in self.skill_patterns.keys()}
+        
+        # Process noun chunks
         for chunk in doc.noun_chunks:
-            skills.append(chunk.text)
+            cleaned_chunk = chunk.text.strip()
+            if any(skill in cleaned_chunk for skill in self.valid_skills):
+                potential_skills.add(cleaned_chunk)
+        
+        # Process individual tokens
         for token in doc:
-            if token.pos_ in ['PROPN', 'NOUN']:
-                skills.append(token.text)
-        return list(set(skills))
-    
+            if token.text in self.valid_skills and token.text not in self.exclude_words:
+                potential_skills.add(token.text)
+        
+        # Validate and categorize skills
+        validated_skills = []
+        for skill in potential_skills:
+            for category, patterns in self.skill_patterns.items():
+                if any(pattern in skill for pattern in patterns):
+                    validated_skills.append(skill)
+                    categorized_skills[category].append(skill)
+                    break
+        
+        return list(set(validated_skills)), categorized_skills
+
     def calculate_similarity(self, resume_text, job_description):
         processed_resume = self.preprocess_text(resume_text)
         processed_job = self.preprocess_text(job_description)
         
-        tfidf_matrix = self.vectorizer.fit_transform([processed_resume, processed_job])
-        similarity_score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        # Extract and categorize skills
+        resume_skills, resume_categorized = self.extract_skills(resume_text)
+        job_skills, job_categorized = self.extract_skills(job_description)
         
-        resume_skills = set(self.extract_skills(resume_text))
-        job_skills = set(self.extract_skills(job_description))
+        resume_skills = set(resume_skills)
+        job_skills = set(job_skills)
         
+        # Calculate weighted skill match
         matching_skills = resume_skills.intersection(job_skills)
-        skill_match_percentage = len(matching_skills) / len(job_skills) if job_skills else 0
+        total_weight = 0
+        matched_weight = 0
+        
+        for category, skills in job_categorized.items():
+            category_weight = self.skill_weights.get(category, 1.0)
+            for skill in skills:
+                total_weight += category_weight
+                if skill in matching_skills:
+                    matched_weight += category_weight
+        
+        skill_match_percentage = matched_weight / total_weight if total_weight > 0 else 0
+        
+        # Calculate text similarity
+        tfidf_matrix = self.vectorizer.fit_transform([processed_resume, processed_job])
+        text_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        
+        # Combine scores
+        final_score = (text_similarity * 0.4) + (skill_match_percentage * 0.6)
         
         return {
-            'similarity_score': similarity_score,
+            'similarity_score': final_score,
             'skill_match_percentage': skill_match_percentage,
             'matching_skills': list(matching_skills),
-            'missing_skills': list(job_skills - resume_skills)
+            'missing_skills': list(job_skills - resume_skills),
+            'categorized_skills': {
+                'resume': resume_categorized,
+                'job': job_categorized
+            }
         }
-    
+
     def analyze_match(self, resume_text, job_description):
         results = self.calculate_similarity(resume_text, job_description)
+        
         return {
             'overall_match': round(results['similarity_score'] * 100, 2),
             'skill_match': round(results['skill_match_percentage'] * 100, 2),
             'matching_skills': results['matching_skills'],
             'missing_skills': results['missing_skills'],
+            'skill_categories': results['categorized_skills'],
             'recommendation': self._generate_recommendation(results)
         }
     
     def _generate_recommendation(self, results):
-        if results['similarity_score'] >= 0.7:
-            return "Strong Match: Well-aligned with requirements"
-        elif results['similarity_score'] >= 0.5:
-            return "Moderate Match: Consider highlighting relevant skills"
-        return "Weak Match: Significant gaps exist"
+        score = results['similarity_score']
+        if score >= 0.7:
+            return "Strong Match: Your profile aligns well with the job requirements"
+        elif score >= 0.5:
+            return "Moderate Match: Consider emphasizing relevant skills and experience"
+        return "Limited Match: Significant skill gaps identified"
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -134,7 +194,8 @@ class ResumeAnalyzer(Resource):
             api.abort(400, 'Only PDF files allowed')
         
         filename = secure_filename(resume_file.filename)
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}")
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], 
+                               f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}")
         
         try:
             resume_file.save(temp_path)
