@@ -7,52 +7,47 @@
         "machine_learning": [
             "tensorflow", "pytorch", "keras", "scikit-learn", "xgboost", "lightgbm",
             "catboost", "neural networks", "deep learning", "cnn", "rnn", "lstm",
-            "transformers", "bert", "gpt", "reinforcement learning", "supervised learning",
-            "unsupervised learning", "computer vision", "nlp", "natural language processing",
-            "sentiment analysis", "object detection", "image classification", "yolo",
-            "transfer learning", "feature engineering", "dimensionality reduction",
-            "clustering", "classification", "regression", "anomaly detection",
-            "time series analysis", "ensemble methods", "hyperparameter tuning"
+            "transformer", "bert", "gpt", "reinforcement learning", "supervised learning",
+            "unsupervised learning", "computer vision", "nlp", "object detection",
+            "image classification", "yolo", "transfer learning", "feature engineering",
+            "dimensionality reduction", "clustering", "classification", "regression",
+            "anomaly detection", "time series analysis", "ensemble methods"
         ],
         "generative_ai": [
             "gpt-3", "gpt-4", "llama", "stable diffusion", "dall-e", "midjourney",
             "hugging face", "langchain", "openai", "anthropic", "prompt engineering",
             "text-to-image", "text-to-speech", "speech-to-text", "large language models",
-            "diffusion models", "gan", "generative adversarial networks", "vae",
-            "variational autoencoders", "transformer architecture", "attention mechanism",
-            "fine-tuning", "few-shot learning", "zero-shot learning", "rag",
-            "retrieval augmented generation", "vector databases", "semantic search"
+            "diffusion models", "gan", "vae", "attention mechanism", "fine-tuning",
+            "few-shot learning", "zero-shot learning", "rag", "vector databases",
+            "semantic search", "bedrock", "vertex ai", "azure openai"
         ],
         "data_science": [
             "pandas", "numpy", "scipy", "matplotlib", "seaborn", "plotly", "tableau",
             "power bi", "data visualization", "statistical analysis", "hypothesis testing",
-            "a/b testing", "experimental design", "data cleaning", "data preprocessing",
-            "feature selection", "model evaluation", "cross-validation", "data mining",
-            "data warehousing", "etl", "big data", "hadoop", "spark", "dask",
-            "data modeling", "database design", "sql", "nosql", "data governance",
-            "data quality", "data pipeline", "airflow", "luigi", "jupyter",
-            "data storytelling", "predictive analytics", "prescriptive analytics"
+            "a/b testing", "experimental design", "data preprocessing", "feature selection",
+            "model evaluation", "cross-validation", "data mining", "data warehousing",
+            "etl", "hadoop", "spark", "dask", "data modeling", "database design",
+            "sql", "nosql", "data governance", "data quality", "data pipeline"
         ],
         "data_analysis": [
-            "excel", "vba", "spss", "sas", "stata", "database management",
-            "data collection", "data validation", "data cleaning", "data wrangling",
-            "data transformation", "pivot tables", "vlookup", "data reporting",
+            "excel", "spss", "sas", "stata", "database management", "data validation",
+            "data wrangling", "data transformation", "pivot tables", "vlookup",
             "business intelligence", "kpi tracking", "metrics analysis", "dashboarding",
             "statistical modeling", "forecasting", "trend analysis", "correlation analysis",
             "regression analysis", "factor analysis", "cluster analysis", "conjoint analysis",
-            "market basket analysis", "cohort analysis", "funnel analysis", "rca",
-            "root cause analysis", "data interpretation", "descriptive statistics"
+            "market basket analysis", "cohort analysis", "funnel analysis", "rca"
         ],
         "cloud_services": [
             "aws", "azure", "gcp", "docker", "kubernetes", "terraform", "jenkins",
-            "aws sagemaker", "azure ml", "google vertex ai", "databricks", "snowflake",
-            "redshift", "bigquery", "azure synapse", "dataflow", "cloudformation",
-            "aws glue", "aws emr", "azure databricks", "data lake", "data warehouse"
+            "sagemaker", "azure ml", "vertex ai", "databricks", "snowflake", "redshift",
+            "bigquery", "azure synapse", "dataflow", "cloudformation", "aws glue",
+            "aws emr", "azure databricks", "data lake", "data warehouse"
         ],
-        "frameworks": [
-            "django", "flask", "fastapi", "streamlit", "dash", "gradio", "mlflow",
-            "kubeflow", "ray", "weights & biases", "optuna", "kedro", "prefect",
-            "great expectations", "dvc", "labelbox", "roboflow"
+        "data_frameworks": [
+            "apache spark", "apache hadoop", "apache kafka", "apache airflow",
+            "apache nifi", "apache cassandra", "elasticsearch", "kibana", "logstash",
+            "redis", "mongodb", "postgresql", "mysql", "oracle", "sql server",
+            "dbt", "airbyte", "prefect", "dagster", "metabase", "superset"
         ]
     },
     "skill_weights": {
@@ -62,13 +57,33 @@
         "data_science": 1.6,
         "data_analysis": 1.5,
         "cloud_services": 1.4,
-        "frameworks": 1.3
+        "data_frameworks": 1.4
     },
     "exclude_words": [
-        "experience", "year", "years", "month", "months", "skill", "skills",
-        "proficient", "expert", "advanced", "intermediate", "beginner",
-        "knowledge", "understanding", "familiar", "proficiency", "degree",
-        "education", "university", "college", "school", "certification",
-        "certificate", "qualified", "training", "course", "completed"
+        "experience", "year", "years", "month", "months",
+        "understanding", "expertise", "professional", "background",
+        "solution", "solutions", "need", "needs", "client", "clients",
+        "team", "teams", "growth", "future", "present", "summary",
+        "profile", "path", "paths", "journey", "impact", "impactful",
+        "complex", "problem", "problems", "senior", "junior", "developer",
+        "engineer", "engineering", "professional", "professionals",
+        "publication", "publications", "project", "projects",
+        "skill", "skills", "top", "qualification", "qualifications",
+        "certificate", "certification", "certifications", "page",
+        "strong", "proficient", "expert", "advanced", "intermediate",
+        "beginner", "knowledge", "familiar", "proficiency", "degree",
+        "education", "university", "college", "school", "training",
+        "course", "completed", "overview", "summary", "objective",
+        "career", "work", "job", "position", "role", "responsibility",
+        "responsibilities", "achievement", "achievements", "success",
+        "successful", "lead", "leading", "leader", "managed", "manager",
+        "management", "developed", "development", "implemented",
+        "implementation", "created", "creation", "built", "building",
+        "designed", "design", "architecture", "architected", "integrated",
+        "integration", "deployed", "deployment", "maintained",
+        "maintenance", "supported", "support", "troubleshot",
+        "troubleshooting", "resolved", "resolution", "improved",
+        "improvement", "optimized", "optimization", "enhanced",
+        "enhancement", "streamlined", "streamlining"
     ]
 }

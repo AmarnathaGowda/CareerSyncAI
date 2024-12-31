@@ -32,10 +32,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 analysis_model = api.model('Analysis', {
     'overall_match': fields.Float(example=75.5),
     'skill_match': fields.Float(example=80.0),
-    'matching_skills': fields.List(fields.String, example=['python', 'javascript']),
-    'missing_skills': fields.List(fields.String, example=['docker']),
-    'recommendation': fields.String(example='Strong Match'),
-    'skill_categories': fields.Raw(description='Categorized skills')
+    'matching_skills': fields.List(fields.String),
+    'missing_skills': fields.List(fields.String),
+    'recommendation': fields.String(),
+    'categorized_skills': fields.Raw(description='Skills by category')
 })
 
 response_model = api.model('Response', {
@@ -49,99 +49,126 @@ class ResumeJobMatcher:
         self.nlp = spacy.load('en_core_web_sm')
         self.vectorizer = TfidfVectorizer(stop_words='english')
         
-        # Load skills data from JSON file
         with open('skills_data.json', 'r') as f:
             skills_data = json.load(f)
-            
+        
         self.skill_patterns = skills_data['skill_patterns']
         self.skill_weights = skills_data['skill_weights']
         self.exclude_words = set(skills_data['exclude_words'])
         
-        # Create flattened skill list
-        self.valid_skills = set([
-            skill.lower() 
-            for category in self.skill_patterns.values() 
-            for skill in category
-        ])
+        # Create exact skill matches dictionary
+        self.valid_skills = {}
+        for category, skills in self.skill_patterns.items():
+            for skill in skills:
+                self.valid_skills[skill.lower()] = category
 
-    def preprocess_text(self, text):
-        text = text.lower()
-        text = re.sub(r'[^\w\s]', ' ', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        doc = self.nlp(text)
-        return ' '.join([token.lemma_ for token in doc if not token.is_stop])
+    def clean_text(self, text):
+        """Clean text by removing special characters and normalizing whitespace"""
+        text = re.sub(r'[^\w\s-]', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'\n', ' ', text)
+        return text.lower().strip()
+
+    def is_date_or_location(self, text):
+        """Check if text contains date or location patterns"""
+        date_patterns = [
+            r'\d{4}\s*-\s*\d{4}',
+            r'\d{4}\s*-\s*present',
+            r'(january|february|march|april|may|june|july|august|september|october|november|december)',
+            r'\d{1,2}\s*years?',
+            r'\d{4}'
+        ]
+        
+        location_patterns = [
+            r'\b(india|usa|uk|canada|australia)\b',
+            r'\b[a-z]+\s*,\s*[a-z]+\b'
+        ]
+        
+        return any(re.search(pattern, text, re.IGNORECASE) 
+                  for pattern in date_patterns + location_patterns)
 
     def extract_skills(self, text):
-        doc = self.nlp(text.lower())
-        potential_skills = set()
-        categorized_skills = {category: [] for category in self.skill_patterns.keys()}
+        """Extract skills with improved accuracy"""
+        text = self.clean_text(text)
+        doc = self.nlp(text)
         
-        # Process noun chunks
-        for chunk in doc.noun_chunks:
-            cleaned_chunk = chunk.text.strip()
-            if any(skill in cleaned_chunk for skill in self.valid_skills):
-                potential_skills.add(cleaned_chunk)
+        extracted_skills = {category: set() for category in self.skill_patterns.keys()}
         
-        # Process individual tokens
-        for token in doc:
-            if token.text in self.valid_skills and token.text not in self.exclude_words:
-                potential_skills.add(token.text)
+        # Process text in chunks
+        chunks = list(doc.noun_chunks) + [token for token in doc 
+                                        if token.pos_ in ['PROPN', 'NOUN']]
         
-        # Validate and categorize skills
-        validated_skills = []
-        for skill in potential_skills:
-            for category, patterns in self.skill_patterns.items():
-                if any(pattern in skill for pattern in patterns):
-                    validated_skills.append(skill)
-                    categorized_skills[category].append(skill)
-                    break
+        for chunk in chunks:
+            chunk_text = str(chunk).lower()
+            
+            # Skip if chunk contains date, location or excluded words
+            if (self.is_date_or_location(chunk_text) or 
+                any(word in chunk_text for word in self.exclude_words)):
+                continue
+            
+            # Check for exact matches
+            if chunk_text in self.valid_skills:
+                category = self.valid_skills[chunk_text]
+                extracted_skills[category].add(chunk_text)
+                continue
+            
+            # Check for compound skills
+            for skill, category in self.valid_skills.items():
+                if (len(skill.split()) > 1 and 
+                    skill in chunk_text and 
+                    len(chunk_text.split()) <= len(skill.split()) + 1):
+                    extracted_skills[category].add(skill)
         
-        return list(set(validated_skills)), categorized_skills
+        return {category: list(skills) for category, skills in extracted_skills.items()}
 
     def calculate_similarity(self, resume_text, job_description):
-        processed_resume = self.preprocess_text(resume_text)
-        processed_job = self.preprocess_text(job_description)
+        """Calculate similarity with improved skill weighting"""
+        resume_skills = self.extract_skills(resume_text)
+        job_skills = self.extract_skills(job_description)
         
-        # Extract and categorize skills
-        resume_skills, resume_categorized = self.extract_skills(resume_text)
-        job_skills, job_categorized = self.extract_skills(job_description)
+        # Flatten skills
+        resume_flat = set([skill for skills in resume_skills.values() 
+                          for skill in skills])
+        job_flat = set([skill for skills in job_skills.values() 
+                       for skill in skills])
         
-        resume_skills = set(resume_skills)
-        job_skills = set(job_skills)
-        
-        # Calculate weighted skill match
-        matching_skills = resume_skills.intersection(job_skills)
+        # Calculate weighted match
         total_weight = 0
         matched_weight = 0
         
-        for category, skills in job_categorized.items():
-            category_weight = self.skill_weights.get(category, 1.0)
+        for category, skills in job_skills.items():
+            weight = self.skill_weights.get(category, 1.0)
             for skill in skills:
-                total_weight += category_weight
-                if skill in matching_skills:
-                    matched_weight += category_weight
+                total_weight += weight
+                if skill in resume_flat:
+                    matched_weight += weight
         
-        skill_match_percentage = matched_weight / total_weight if total_weight > 0 else 0
+        skill_match_percentage = (matched_weight / total_weight 
+                                if total_weight > 0 else 0)
         
         # Calculate text similarity
+        processed_resume = self.clean_text(resume_text)
+        processed_job = self.clean_text(job_description)
+        
         tfidf_matrix = self.vectorizer.fit_transform([processed_resume, processed_job])
         text_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
         
-        # Combine scores
+        # Combined score
         final_score = (text_similarity * 0.4) + (skill_match_percentage * 0.6)
         
         return {
             'similarity_score': final_score,
             'skill_match_percentage': skill_match_percentage,
-            'matching_skills': list(matching_skills),
-            'missing_skills': list(job_skills - resume_skills),
+            'matching_skills': list(resume_flat.intersection(job_flat)),
+            'missing_skills': list(job_flat - resume_flat),
             'categorized_skills': {
-                'resume': resume_categorized,
-                'job': job_categorized
+                'resume': resume_skills,
+                'job': job_skills
             }
         }
 
     def analyze_match(self, resume_text, job_description):
+        """Generate final analysis"""
         results = self.calculate_similarity(resume_text, job_description)
         
         return {
@@ -149,16 +176,17 @@ class ResumeJobMatcher:
             'skill_match': round(results['skill_match_percentage'] * 100, 2),
             'matching_skills': results['matching_skills'],
             'missing_skills': results['missing_skills'],
-            'skill_categories': results['categorized_skills'],
+            'categorized_skills': results['categorized_skills'],
             'recommendation': self._generate_recommendation(results)
         }
     
     def _generate_recommendation(self, results):
+        """Generate recommendation based on match score"""
         score = results['similarity_score']
         if score >= 0.7:
-            return "Strong Match: Your profile aligns well with the job requirements"
+            return "Strong Match: Profile aligns well with requirements"
         elif score >= 0.5:
-            return "Moderate Match: Consider emphasizing relevant skills and experience"
+            return "Moderate Match: Consider emphasizing relevant skills"
         return "Limited Match: Significant skill gaps identified"
 
 def allowed_file(filename):
@@ -194,8 +222,10 @@ class ResumeAnalyzer(Resource):
             api.abort(400, 'Only PDF files allowed')
         
         filename = secure_filename(resume_file.filename)
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], 
-                               f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}")
+        temp_path = os.path.join(
+            app.config['UPLOAD_FOLDER'],
+            f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+        )
         
         try:
             resume_file.save(temp_path)
