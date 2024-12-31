@@ -1,0 +1,21 @@
+flask
+flask-restx
+scikit-learn
+spacy
+PyPDF2
+werkzeug
+
+# For mac users only
+# pip install -U pip setuptools wheel
+# pip install -U 'spacy[apple]'
+# python -m spacy download en_core_web_sm
+
+#For Windows users only
+# pip install -U pip setuptools wheel
+# pip install -U spacy
+# python -m spacy download en_core_web_sm
+
+#For Windows users with GPU 
+# pip install -U pip setuptools wheel
+# pip install -U 'spacy[cuda11x]'
+# python -m spacy download en_core_web_sm
