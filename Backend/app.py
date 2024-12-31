@@ -11,8 +11,10 @@ import PyPDF2
 import tempfile
 from datetime import datetime
 import json
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 api = Api(
     app,
@@ -21,6 +23,7 @@ api = Api(
     description='AI-powered resume and job description matching API',
     doc='/swagger'
 )
+
 
 ns = api.namespace('api/v1', description='Resume matching operations')
 
