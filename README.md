@@ -2,7 +2,7 @@
 
 AI-powered resume analysis tool that matches resumes against job descriptions using NLP.
 
-```
+```mermaid
 flowchart TD;
     subgraph "Frontend (React + Tailwind CSS)"
         UI[User Interface]
