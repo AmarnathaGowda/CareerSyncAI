@@ -2,6 +2,33 @@
 
 AI-powered resume analysis tool that matches resumes against job descriptions using NLP.
 
+```
+flowchart TD;
+    subgraph "Frontend (React + Tailwind CSS)"
+        UI[User Interface]
+    end
+    subgraph "API Layer (Flask + Swagger)"
+        API[Flask API Server] -->|Handles requests| Analyzer[Resume Analyzer]
+        API -->|Swagger UI| Docs[API Documentation]
+    end
+    subgraph "Backend (NLP + Machine Learning)"
+        NLP[spaCy NLP Processor] -->|Extracts skills| Matcher[Resume-Job Matcher]
+        Matcher -->|Calculates similarity| Scoring[Scoring Engine]
+        Scoring -->|Returns match %| Response[API Response]
+    end
+    subgraph "Storage & Processing"
+        PDFParser[PDF Text Extractor] -->|Extracts text| NLP
+        SkillsDB[Skills Data JSON] -->|Loads patterns| NLP
+        TempStorage[Temporary Storage] -->|Stores uploaded files| PDFParser
+    end
+    subgraph "Client Interaction"
+        UI -->|Sends resume & job description| API
+        Response -->|Returns analysis result| UI
+    end
+    API -.->|Logs requests| Logs[Logging System]
+
+```
+
 ## Features
 - PDF resume parsing and analysis
 - Job description matching
